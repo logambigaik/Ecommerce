@@ -1,0 +1,367 @@
+C:\Users\ganes\Ecommerce>py -m venv ecommerce-venv
+
+C:\Users\ganes\Ecommerce>.\ecommerce-venv\scripts\activate
+(ecommerce-venv) C:\Users\ganes\Ecommerce>
+
+
+py -m pip install Django==1.11.4
+
+(ecommerce-venv) C:\Users\ganes\Ecommerce>mkdir src && cd src
+
+(ecommerce-venv) C:\Users\ganes\Ecommerce\src>ls
+'ls' is not recognized as an internal or external command,
+operable program or batch file.
+
+(ecommerce-venv) C:\Users\ganes\Ecommerce\src>django-admin startproject ecommerce .
+
+ manage.py is in src folder
+
+
+oskey
+
+To run django
+==============
+(ecommerce-venv) C:\Users\ganes\Ecommerce\src> python manage.py runserver
+
+
+to change port
+==============
+(ecommerce-venv) C:\Users\ganes\Ecommerce\src> python manage.py runserver 5000
+
+
+Render HTml:
+===========
+Create a newfile called views.py ,with belwo code
+
+from django.http import HttpResponse
+from django.shortcuts import render
+
+def home_page(request):
+    return HttpResponse('Hello World')
+
+
+And then update the below line in urls.py
+
+from .views import home_page
+
+urlpatterns = [
+    url(r'^$',home_page),
+
+
+
+To create a superuser:
+=======================
+>python manage.py migrate
+>python manage.py createsuperuser
+(ecommerce-venv) C:\Users\ganes\Ecommerce\src>python manage.py createsuperuser
+Username (leave blank to use 'ganes'):
+Email address: ganeshamoorthy@gmail.com
+Password:archu2013
+Password (again):archu2013
+Superuser created successfully.
+
+(ecommerce-venv) C:\Users\ganes\Ecommerce\src>python manage.py runserver
+
+
+
+After adding statis file location in settings and url.py, will get below error while login admin
+[13/Dec/2020 01:15:50] "GET /admin/login/?next=/admin/ HTTP/1.1" 200 1650
+[13/Dec/2020 01:15:50] "GET /static/admin/css/login.css HTTP/1.1" 200 1203
+[13/Dec/2020 01:16:01] "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+[13/Dec/2020 01:16:01] "GET /admin/ HTTP/1.1" 200 3092
+
+For fixing above issue,
+=====================
+python manage.py collectstatic
+
+check in src folder=> new static_cdn folder created
+61 static files copied to 'C:\Users\ganes\Ecommerce\static_cdn'.
+
+Delete admin folder under static_cdn and static_root :
+====================================================
+STATIC_ROOT = os.path.join(os.path.dirname(BASE_DIR),"static_cdn")
+instead
+STATIC_ROOT = os.path.join(os.path.dirname(BASE_DIR),"static_cdn","static_root")
+
+rerun the below command,
+python manage.py collectstatic
+
+Add below code in Static:
+=========================
+
+STATICFILES_DIR = [
+    os.path.join(BASE_DIR,"static_my_proj"),
+]
+STATIC_ROOT = os.path.join(os.path.dirname(BASE_DIR),"static_cdn","static_root")   ==> os.path -crab the dirname and create new folder static_cdn there
+
+
+Include static seetings in urls.py:
+===================================
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+and then,
+if settings.DEBUG:
+    urlpatterns = urlpatterns + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+
+
+Superuser for products:
+user:loga
+password:prabha83
+
+After that add models:
+=====================
+
+from django.db import models
+
+# Create your models here.
+class Product(models.Model):
+    title = models.CharField(max_length=120)
+    description=models.TextField()
+
+Add app details in setting.py
+=============================
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.staticfiles.finders',
+
+    #our app
+    'products',
+]
+
+python manage.py makekigrations
+python manage.py migrate
+
+If we add/no update models, the below commands should be performed every single time
+python manage.py makekigrations
+python manage.py migrate
+
+Added new field price
+=====================
+# Create your models here.
+class Product(models.Model):
+    title       =   models.CharField(max_length=120)
+    description =   models.TextField()
+    price       =   models.DecimalField(decimal_places=2,max_digits=10,default=11.10)
+
+Add models in admin.py(under products app)
+==========================================
+
+from .models import Product
+admin.site.register(Product)
+
+Run the server:
+=============
+python manage.py runserver
+
+Note:check admin page
+
+
+After that instead of dispalying Product1 Products2 , if u want to display title in Products Section(in admin),use below command
+in models.py
+
+from django.db import models
+
+# Create your models here.
+class Product(models.Model):
+    title       =   models.CharField(max_length=120)
+    description =   models.TextField()
+    price       =   models.DecimalField(decimal_places=2,max_digits=10,default=11.10)
+
+    def __str__(self):
+        return self.title
+
+    def __unicode__(self):
+        return self.title
+
+
+# Update view.py in products for ListView:
+ ========================================
+from django.views.generic import ListView
+from django.shortcuts import render
+from .models import Product
+
+# Create your views here.
+class ProductListView(ListView):
+    queryset  = Product.objects.all()
+
+def product_list_view(request):
+    queryset = Product.objects.all()
+    context = {
+        'object_list':queryset
+    }
+    return render(request,'product/product_list_view.html')
+
+urls.py
+=======
+from product.views import ProductListView, product_list_view
+
+url(r'^products/$',ProductListView.as_view()),
+url(r'^products-fbv/$',product_list_view),
+
+in products/view.py:
+===================
+from django.views.generic import ListView
+
+from django.shortcuts import render
+
+from .models import Product
+
+# Create your views here.
+class ProductListView(ListView):
+    queryset  = Product.objects.all()
+    template_name = "product/list.html"
+
+def product_list_view(request):
+    queryset = Product.objects.all()
+    context = {
+        'qs': queryset              =====>Update  object_list as 'qs'  ==> update this qs in products/product/list.html {{ qs }}
+    }
+    return render(request,'product/list.html',context)
+
+
+products/product/list.html :
+=========================
+{{ qs }}
+
+http://127.0.0.1:8000/products-fbv/  ==>function call
+output: <QuerySet [<Product: Robot>, <Product: Flashlight>]>
+
+
+To get the content of query we tried the below one in list.html and in views.py(products):
+=========================================================================================
+in list.html
+{{ qs }}
+
+""" context = super(ProductListView, self).get_context_data(*args,**kwargs) -
+    output:
+    ------
+    {'paginator': None, 'page_obj': None, 'is_paginated': False, 'object_list': <QuerySet [<Product: Robot>, <Product: Flashlight>]>, 'product_list': <QuerySet [<Product: Robot>, <Product: Flashlight>]>, 'view': <products.views.ProductList
+View object at 0x0478CCD0>}
+    to understand the output displayed those in list.html as like below
+"""
+
+{
+    'paginator': None,
+    'page_obj': None,
+    'is_paginated': False,
+    'object_list': <QuerySet [<Product: Robot>, <Product: Flashlight>]>,
+    'product_list': <QuerySet [<Product: Robot>, <Product: Flashlight>]>,
+    'view': <products.views.ProductListView object at 0x046DB050>
+}
+
+{{ paginator }}
+
+{{ is_paginated }}
+
+{{ object_list }}
+
+in view.py:
+==========
+
+
+class ProductListView(ListView):
+    queryset  = Product.objects.all()
+    template_name = "product/list.html"
+
+    def get_context_data(self,*args, **kwargs):
+        context = super(ProductListView, self).get_context_data(*args,**kwargs)
+        print(context)
+        return context
+
+def product_list_view(request):
+    queryset = Product.objects.all()
+    context = {
+        'qs': queryset
+    }
+    return render(request,'product/list.html',context)
+
+At last , we got object_list holding the values. so removed all in list.html and added only {{ object_list }}
+Also reoved the get_context_data function in views.py
+views.py:
+========
+
+from django.shortcuts import render
+
+from .models import Product
+
+# Create your views here.
+
+class ProductListView(ListView):
+    queryset  = Product.objects.all()
+    template_name = "product/list.html"
+
+    """
+    def get_context_data(self,*args, **kwargs):
+        context = super(ProductListView, self).get_context_data(*args,**kwargs)
+        print(context)
+        return context
+    """
+def product_list_view(request):
+    queryset = Product.objects.all()
+    context = {
+      # 'qs': queryset
+       'object_list' : queryset
+    }
+    return render(request,'product/list.html',context)
+
+list.html:
+=========
+
+{{ object_list }}
+
+http://127.0.0.1:8000/products-fbv/
+
+output:<QuerySet [<Product: Robot>, <Product: Flashlight>]>
+
+http://127.0.0.1:8000/products/
+output:<QuerySet [<Product: Robot>, <Product: Flashlight>]>
+
+
+Note:Refer : kirr.co/plqpin  for regular expereesion Django url
+
+Detail View
+=========
+class ProductDetailView(DetailView):
+    queryset  = Product.objects.all()
+    template_name = "product/detail.html"
+
+def product_detail_view(request,pk=None,*args,**kwargs):
+    '''
+    print(kwargs)    #primary key is dictionary format
+    print(args)
+    '''
+    queryset = Product.objects.get(pk=pk)  # instead pk=pk  can use id=pk too
+    print(queryset)
+
+    context = {
+      # 'qs': queryset
+       'object_list' : queryset
+    }
+    return render(request,'product/detail.html',context)
+
+
+
+Instead of query returns o,
+'''DoesNotExist at /products-fbv/5/
+Product matching query does not exist.
+'''
+Add from django.shortcuts import render,get_object_or_404 in views.py
+
+
+image       =   models.FileField(upload_to='products/',null=True,blank=True)
+        null=TRue means accepts null in database
+        blank=True =means accepts blank in django
+
+
+  install pip install pillow for supporting image file
+
+
+
